@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .search-container input[type=text] {
+            padding: 10px;
+            width: 60%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .search-container button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .search-container button:hover {
+            background-color: #45a049;
+        }
+
+        .books-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 4px;
+        }
+
+        .book {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Library Management System</h1>
+
+        <div class="search-container">
+            <form onsubmit="searchBooks(e)" id="searchForm">
+            <input type="text" id="searchInput" placeholder="Search for books...">
+            <button type="submit">Search</button>
+        </form>
+        </div>
+
+        <div class="books-container" id="booksContainer">
+            
+        </div>
+        <div id="booksList">
+        </div>
+        <br><br><hr>
+        <div>
+            <h4>Returned Books</h4>
+            <hr>
+            <div id="returnedList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+
+                            
+                document.getElementById('searchForm').addEventListener('submit', function(event) {
+                        event.preventDefault(); 
+                        const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
+                    if (searchInput) {
+                     searchBooks(searchInput);
+      } else {
+                    alert('Please enter a search query.');
+      }
+    });
+            function searchBooks(query) {
+      const books = document.querySelectorAll('.book');
+      books.forEach(book => {
+        const bookName = book.querySelector('p:nth-child(1)').textContent.toLowerCase();
+             if (bookName.includes(query)) {
+                 book.style.display = 'block';
+        } else {
+              book.style.display = 'none';
+        }
+      });
+    }
+          function fetchBooks() {
+                 axios.get("http://localhost:3000/getBooks")
+                  .then(response => {
+                        const books = response.data;
+                         const booksListElement = document.getElementById('booksList');
+
+                    booksListElement.innerHTML = '';
+                     books.forEach(book => {
+                         const bookElement = document.createElement('div');
+                     bookElement.classList.add('book');
+                     bookElement.innerHTML = `<p><strong>Book Name:</strong> ${book.bookName}</p>
+                     <p><strong>Return Date:</strong> ${book.returnDate}</p>
+                      <p><strong>Current Fine:</strong> ${book.currentFine}</p>
+                     <button onclick="returnBook(${book.id},${book.currentFine})">Return</button><hr>`;
+                       booksListElement.appendChild(bookElement);
+                  });
+              })
+             .catch(error => {
+                    console.error('Error fetching books:', error);
+             });
+    }
+
+
+    function returnBook(bookId, fine) {
+            if (fine > 0) {
+                const confirmation = confirm(`A fine of ${fine} has been imposed for this book. Do you want to proceed with returning it?`);
+                if (confirmation) {
+                    axios.delete(`http://localhost:3000/deleteBook/${bookId}`)
+                        .then(response => {
+                            handleReturnedBook(response.data);
+                            console.log('Book returned successfully:', response.data);
+                            fetchBooks();
+                        })
+                        .catch(error => {
+                            console.error('Error returning book:', error);
+                        });
+                }
+            } else {
+                axios.delete(`http://localhost:3000/deleteBook/${bookId}`)
+                    .then(response => {
+                        handleReturnedBook(response.data);
+                        console.log('Book returned successfully:', response.data);
+                        fetchBooks();
+                    })
+                    .catch(error => {
+                        console.error('Error returning book:', error);
+                    });
+            }
+        }
+
+
+
+            fetchBooks();
+
+
+            function handleReturnedBook(returnedBook) {
+                    const booksList = document.getElementById('returnedList');
+                    const bookElement = document.createElement('div');
+                    bookElement.innerHTML = `<p><strong>Book Name:</strong> ${returnedBook.bookName}</p>
+                               <p><strong>Return Date:</strong> ${returnedBook.returnDate}</p>
+                               <p><strong>Current Fine:</strong> ${returnedBook.fine}</p><hr>`;
+                    booksList.appendChild(bookElement);
+                }
+
+                        
+                window.addEventListener('DOMContentLoaded', (e) => {
+                        axios.get("http://localhost:3000/getreturned").then((response) => {
+                            for (let i = 0; i < response.data.length; i++) {
+                                handleReturnedBook(response.data[i]);
+                            }
+                        }).catch((error) => {
+                            console.log(error);
+                        });
+                    });
+    </script>
+
+</body>
+
+</html>
